@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 
 # MwO Pilot Statistics Library
-#   v0.2 (2021051001)
+#   v0.3 (2021051700)
 # (c) 2021 Kirk Stephenson
 # E: nisk.is.afk@gmail.com
 # W: github.com/NiskComputermans
+#
+# Python 3 port of eta0h's MWO-Leaderboard-Stats (https://github.com/eta0h/MWO-Leaderboard-Stats)
 
 import argparse
 import requests
