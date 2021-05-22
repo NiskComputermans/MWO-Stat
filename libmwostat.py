@@ -134,6 +134,9 @@ class MWOStat:
         'Assault':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0}
       }
 
+      if self.debug_on:
+        print("Looking up pilot \"%s\" ..." % (mwo_pilot))
+
       for weight_class in ['All', 'Light', 'Medium', 'Heavy', 'Assault']:
         if weight_class == 'All': class_index = 0
         if weight_class == 'Light': class_index = 1
