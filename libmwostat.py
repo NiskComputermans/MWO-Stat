@@ -23,6 +23,8 @@ class MWOStat:
 
     self.debug_on = False
 
+    self.api_key = None
+
   ## Debug mode
   #    This function enables the debug flag. When debugging is on, some tests will print output to screen.
   #    Debug mode is equivalent to running most programs with the -v flag.
@@ -169,3 +171,31 @@ class MWOStat:
       outputs.append(cooked_stats)
 
     return(outputs)
+
+  ## Set API key
+  #    Sets the API key to use with calls to the mwomercs match API system.
+  def SetAPIKey(self, mwo_api_key = None):
+    if mwo_api_key is None:
+      return("ERR: must provide an API key to this function!")
+
+    self.api_key = mwo_api_key
+
+  ## Get match stats from the API
+  #    This function grabs the match information from a private lobby game using the exportable match ID.
+  def GetAPIMatchStats(self, mwo_match_id = None):
+    if self.api_key is None:
+      return("ERR: must first set an API key before scraping match stats!")
+    if mwo_match_id is None:
+      return("ERR: must provide a valid match ID to test!")
+
+    url = 'https://mwomercs.com/api/v1/matches/%s?api_token=%s' % (mwo_match_id, self.api_key)
+
+    if self.debug_on:
+      print("Requesting %s ..." % (url))
+
+    ret = requests.get(url)
+
+    if ret.ok:
+      return(ret.json())
+    else:
+      return("ERR: Request returned status code %s (%s)" % (ret.status_code, ret.reason))
