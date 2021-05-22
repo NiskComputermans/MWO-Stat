@@ -89,4 +89,5 @@ for mwo_pilot in mwo_pilots:
   outputs.append(cooked_stats)
 for line in outputs:
   for key in line:
-    print("%s: %s" % (key, line[key]))
+    whitespace = ' ' *(10 - len(key))
+    print("%s:%s%s" % (key, whitespace, line[key]))
