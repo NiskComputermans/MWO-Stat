@@ -68,4 +68,4 @@ Data returned is passed through in the same format the web API presents it.
 
 ## Acknowledgements
 
-This library was put together from [eta0h's Python 2.7 leaderboard stats library](https://github.com/eta0h/MWO-Leaderboard-Stats). It was originally intended to be a simple Python 3 port, but has slowly grown out to where I think this could be a useful tool for the community in its own right.
+This library was based on [eta0h's Python 2.7 leaderboard stats library](https://github.com/eta0h/MWO-Leaderboard-Stats). It was originally intended to be a simple Python 3 port, but has slowly grown out to where I think this could be a useful tool for the community in its own right.
