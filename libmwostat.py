@@ -48,7 +48,7 @@ class MWOStat:
     ret = self.sess.post(url, data = self.post_data)
 
     if self.debug_on:
-      print("MWO login return code: " % (ret))
+      print("MWO login return code: %s" % (ret))
 
   def GetLeaderboardStats(self, mwo_season=-1):
     if self.sess is None:
@@ -56,9 +56,16 @@ class MWOStat:
     if len(self.pilots) == 0:
       return("ERR: No pilots list loaded. Run ImportPilots before scraping stats!")
 
-    if mwo_season == -1:
-      # Temp code. TODO: scrape latest season number from leaderboard page.
-      mwo_season = 1
+    if int(mwo_season) == -1:
+      url = 'https://mwomercs.com/profile/leaderboards?type=%i&user=%s' % (0, "Nisk")
+      ret = self.sess.get(url)
+
+      soup = BeautifulSoup(ret.text, 'html.parser')
+
+      mwo_season = int(list(soup.find('select', id="season").stripped_strings)[-1].split(" ")[1])
+
+      if self.debug_on:
+        print("No season specified, using season %s" % (mwo_season))
 
     self.cookie_jar = requests.cookies.RequestsCookieJar()
     self.cookie_jar.set('leaderboard_season', str(mwo_season), domain='.mwomercs.com', path='/')

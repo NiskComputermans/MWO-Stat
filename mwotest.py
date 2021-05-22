@@ -17,7 +17,7 @@ argparser = argparse.ArgumentParser()
 argparser.add_argument('-u', dest='username', required=True)
 argparser.add_argument('-p', dest='password', required=True)
 argparser.add_argument('-f', dest='pilotfile', required=False, default='pilots.txt')
-argparser.add_argument('-s', dest='season', required=False, default='-1')
+argparser.add_argument('-s', dest='season', required=False, default=-1)
 
 args = argparser.parse_args()
 
@@ -25,7 +25,7 @@ args = argparser.parse_args()
 stat = MWOStat()
 
 # Turn on debugging output
-#stat.EnableDebug()
+stat.EnableDebug()
 
 # Import pilots from file
 stat.ImportPilots(pilot_file = args.pilotfile)
