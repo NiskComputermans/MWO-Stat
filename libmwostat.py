@@ -1,93 +1,108 @@
 #!/usr/bin/python3
 
 # MwO Pilot Statistics Library
-#   v0.3 (2021051700)
+#   v0.4 (2021052200)
 # (c) 2021 Kirk Stephenson
 # E: nisk.is.afk@gmail.com
 # W: github.com/NiskComputermans
 #
 # Python 3 port of eta0h's MWO-Leaderboard-Stats (https://github.com/eta0h/MWO-Leaderboard-Stats)
 
-import argparse
 import requests
 from bs4 import BeautifulSoup
 
-pilots_file = "pilots.txt"
+class MWOStat:
+  def __init__(self):
+    self.pilots = []
+    self.mwo_url = 'https://mwomercs.com/do/login'
 
-## ARGUMENT HANDLING
-#
-argparser = argparse.ArgumentParser()
-argparser.add_argument('-u', dest='username', required=True)
-argparser.add_argument('-p', dest='password', required=True)
-argparser.add_argument('-f', dest='pilotfile', required=False, default=None)
-argparser.add_argument('-s', dest='season', required=False, default='-1')
+    self.sess = None
+    self.cookie_jar = None
 
-args = argparser.parse_args()
+    self.debug_on = False
 
-mwo_username = args.username
-mwo_password = args.password
-mwo_season = args.season
+  def EnableDebug(self):
+    self.debug_on = True
 
-pilot_stats = []
+  def ImportPilots(self, pilot_file=None, pilot_list=None):
+    if pilot_file is not None:
+      if pilot_list is not None:
+        return("ERR: Use either pilots file or pilot list.")
 
-# Read in pilots file.
-f = open(pilots_file, 'r')
-mwo_pilots = f.read().splitlines()
-f.close()
+      f = open(pilot_file, 'r')
+      self.pilots = f.read().splitlines()
+      f.close()
 
-## LOGIN
-#
-url = 'https://mwomercs.com/do/login'
-post_data = { 'email': mwo_username, 'password': mwo_password }
-  
-sess = requests.Session()
-ret = sess.post(url, data = post_data)
+    elif pilot_list is not None:
+      self.pilots = pilot_list
 
-cookie_jar = requests.cookies.RequestsCookieJar()
-cookie_jar.set('leaderboard_season', str(mwo_season), domain='.mwomercs.com', path='/')
+    else:
+      return("ERR: No pilot file or list has been specified.")
 
-outputs = []
+  def Login(self, mwo_username=None, mwo_password=None):
+    self.post_data = { 'email': mwo_username, 'password': mwo_password }
 
-for mwo_pilot in mwo_pilots:
-  cooked_stats = {'Pilot': mwo_pilot, 'Season': mwo_season,
-    'All':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
-    'Light':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
-    'Medium':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
-    'Heavy':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
-    'Assault':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0}
-  }
-  
-  for weight_class in ['All', 'Light', 'Medium', 'Heavy', 'Assault']:
-    if weight_class == 'All': class_index = 0
-    if weight_class == 'Light': class_index = 1
-    if weight_class == 'Medium': class_index = 2
-    if weight_class == 'Heavy': class_index = 3
-    if weight_class == 'Assault': class_index = 4
+    url = 'https://mwomercs.com/do/login'
 
-    url = 'https://mwomercs.com/profile/leaderboards?type=%i&user=%s' % (class_index, mwo_pilot)
-    sess.cookies.update(cookie_jar)
-    ret = sess.get(url)
+    self.sess = requests.Session()
+    ret = self.sess.post(url, data = self.post_data)
+
+    if self.debug_on:
+      print("MWO login return code: " % (ret))
+
+  def GetLeaderboardStats(self, mwo_season=-1):
+    if self.sess is None:
+      return("ERR: Invalid session. Must log on to MWO by running Login before scraping stats!")
+    if len(self.pilots) == 0:
+      return("ERR: No pilots list loaded. Run ImportPilots before scraping stats!")
+
+    if mwo_season == -1:
+      # Temp code. TODO: scrape latest season number from leaderboard page.
+      mwo_season = 1
+
+    self.cookie_jar = requests.cookies.RequestsCookieJar()
+    self.cookie_jar.set('leaderboard_season', str(mwo_season), domain='.mwomercs.com', path='/')
+
+    outputs = []
+
+    for mwo_pilot in self.pilots:
+      cooked_stats = {'Pilot': mwo_pilot, 'Season': mwo_season,
+        'All':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
+        'Light':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
+        'Medium':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
+        'Heavy':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0},
+        'Assault':{'Wins':0,'Losses':0,'Kills':0,'Deaths':0,'Games Played':0,'Average Score':0}
+      }
+
+      for weight_class in ['All', 'Light', 'Medium', 'Heavy', 'Assault']:
+        if weight_class == 'All': class_index = 0
+        if weight_class == 'Light': class_index = 1
+        if weight_class == 'Medium': class_index = 2
+        if weight_class == 'Heavy': class_index = 3
+        if weight_class == 'Assault': class_index = 4
     
-    soup = BeautifulSoup(ret.text, 'html.parser')
+        url = 'https://mwomercs.com/profile/leaderboards?type=%i&user=%s' % (class_index, mwo_pilot)
+        self.sess.cookies.update(self.cookie_jar)
+        ret = self.sess.get(url)
+
+        soup = BeautifulSoup(ret.text, 'html.parser')
     
-    for row in soup('table')[0].findAll('tr'):
-      column = row.findAll('td')
+        for row in soup('table')[0].findAll('tr'):
+          column = row.findAll('td')
     
-      if len(column) == 0:
-        continue
+          if len(column) == 0:
+            continue
   
-      pilot_name = column[1].string
+          pilot_name = column[1].string
 
-      if pilot_name.lower() == mwo_pilot.lower():
-        if pilot_name != cooked_stats['Pilot']:
-          cooked_stats.update({'Pilot': pilot_name})
+          if pilot_name.lower() == mwo_pilot.lower():
+            if pilot_name != cooked_stats['Pilot']:
+              cooked_stats.update({'Pilot': pilot_name})
 
-        class_stats = {weight_class:{'Wins': int(column[2].string), 'Losses': int(column[3].string), 'Kills': int(column[5].string), 'Deaths': int(column[6].string), 'Games Played': int(column[8].string), 'Average Score': int(column[9].string) }}
-        cooked_stats.update(class_stats)
-        break
+            class_stats = {weight_class:{'Wins': int(column[2].string), 'Losses': int(column[3].string), 'Kills': int(column[5].string), 'Deaths': int(column[6].string), 'Games Played': int(column[8].string), 'Average Score': int(column[9].string) }}
+            cooked_stats.update(class_stats)
+            break
 
-  outputs.append(cooked_stats)
-for line in outputs:
-  for key in line:
-    whitespace = ' ' *(10 - len(key))
-    print("%s:%s%s" % (key, whitespace, line[key]))
+      outputs.append(cooked_stats)
+
+    return(outputs)
