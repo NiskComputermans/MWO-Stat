@@ -12,6 +12,8 @@ import requests
 from bs4 import BeautifulSoup
 
 class MWOStat:
+  ## Class initialization
+  #    Anything which should be initialized before use should be set to its initial values here.
   def __init__(self):
     self.pilots = []
     self.mwo_url = 'https://mwomercs.com/do/login'
@@ -21,9 +23,15 @@ class MWOStat:
 
     self.debug_on = False
 
+  ## Debug mode
+  #    This function enables the debug flag. When debugging is on, some tests will print output to screen.
+  #    Debug mode is equivalent to running most programs with the -v flag.
   def EnableDebug(self):
     self.debug_on = True
 
+  ## Pilot import
+  #    This function takes a file or list of pilot names and populates the internal pilots list.
+  #    The internal list is then used for further queries against the website.
   def ImportPilots(self, pilot_file=None, pilot_list=None):
     if pilot_file is not None:
       if pilot_list is not None:
@@ -34,11 +42,17 @@ class MWOStat:
       f.close()
 
     elif pilot_list is not None:
+      if type(pilot_list) != list:
+        return("ERR: pilot_list must be a list of case insensitive strings which match pilot names.")
+
       self.pilots = pilot_list
 
     else:
       return("ERR: No pilot file or list has been specified.")
 
+  ## Login to mwomercs.com
+  #    This function is used to login to mwomercs.com with a user account. Logging in is required to scrape
+  #    the leaderboard on the website. The leaderboard functions will not work without logging in first.
   def Login(self, mwo_username=None, mwo_password=None):
     self.post_data = { 'email': mwo_username, 'password': mwo_password }
 
@@ -50,6 +64,43 @@ class MWOStat:
     if self.debug_on:
       print("MWO login return code: %s" % (ret))
 
+  ## Get first season on the leaderboard
+  #    The website does not host every season back to season zero. This function scrapes the season picker
+  #    from the leaderboards to get the number of the first available season.
+  def GetFirstSeason(self):
+    if self.sess is None:
+      return("ERR: Invalid session. Must log on to MWO by running Login before scraping stats!")
+
+    url = 'https://mwomercs.com/profile/leaderboards?type=%i&user=%s' % (0, "Nisk")
+    ret = self.sess.get(url)
+
+    soup = BeautifulSoup(ret.text, 'html.parser')
+
+    first_season = int(list(soup.find('select', id="season").stripped_strings)[0].split(" ")[1])
+
+    return first_season
+
+  ## Get latest season on the leaderboard
+  #    This function scrapes the season picker from the leaderboards to gete the number of the most recent
+  #    season. Note that the most recent season is the live season and stats for it will change up until
+  #    the start of the next season.
+  def GetLatestSeason(self):
+    if self.sess is None:
+      return("ERR: Invalid session. Must log on to MWO by running Login before scraping stats!")
+
+    url = 'https://mwomercs.com/profile/leaderboards?type=%i&user=%s' % (0, "Nisk")
+    ret = self.sess.get(url)
+
+    soup = BeautifulSoup(ret.text, 'html.parser')
+
+    latest_season = int(list(soup.find('select', id="season").stripped_strings)[-1].split(" ")[1])
+
+    return latest_season
+
+  ## Get leaderboard statistics
+  #    This function scrapes leaderboard statistics for each pilot in the internal pilots list, broken down
+  #    by weight class. If a season is not specified, the current season will be picked. Iterating over
+  #    this function season by season will generate a list of all data for the pilots list per season.
   def GetLeaderboardStats(self, mwo_season=-1):
     if self.sess is None:
       return("ERR: Invalid session. Must log on to MWO by running Login before scraping stats!")
@@ -57,15 +108,17 @@ class MWOStat:
       return("ERR: No pilots list loaded. Run ImportPilots before scraping stats!")
 
     if int(mwo_season) == -1:
-      url = 'https://mwomercs.com/profile/leaderboards?type=%i&user=%s' % (0, "Nisk")
-      ret = self.sess.get(url)
-
-      soup = BeautifulSoup(ret.text, 'html.parser')
-
-      mwo_season = int(list(soup.find('select', id="season").stripped_strings)[-1].split(" ")[1])
+      mwo_season = self.GetLatestSeason()
 
       if self.debug_on:
         print("No season specified, using season %s" % (mwo_season))
+
+    first_season = self.GetFirstSeason()
+
+    if int(mwo_season) < first_season:
+      if self.debug_on:
+        print("Season %s is not available on mwo website, using earliest available season (%s)" % (mwo_season, first_season))
+      mwo_season = first_season
 
     self.cookie_jar = requests.cookies.RequestsCookieJar()
     self.cookie_jar.set('leaderboard_season', str(mwo_season), domain='.mwomercs.com', path='/')

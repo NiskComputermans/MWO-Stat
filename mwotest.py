@@ -11,8 +11,8 @@
 from libmwostat import MWOStat
 import argparse
 
-## ARGUMENT HANDLING
-#
+## Argument handling
+#    This demo uses argparse to pull arguments from the command line.
 argparser = argparse.ArgumentParser()
 argparser.add_argument('-u', dest='username', required=True)
 argparser.add_argument('-p', dest='password', required=True)
@@ -33,9 +33,12 @@ stat.ImportPilots(pilot_file = args.pilotfile)
 # Login to mwomercs.com
 stat.Login(mwo_username = args.username, mwo_password = args.password)
 
+print("First season on website: %s\nLatest season on website: %s" % (stat.GetFirstSeason(), stat.GetLatestSeason()))
+
 # Grab leaderboard stats for the selected season
 leaderboard = stat.GetLeaderboardStats(mwo_season = args.season)
 
+# Print leaderboard stats to the terminal
 for line in leaderboard:
   for key in line:
     whitespace = ' ' *(10 - len(key))
