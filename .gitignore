@@ -1,3 +1,5 @@
 *.swo
 *.swp
 __pycache__
+pilots.txt
+pilots.txt.*
