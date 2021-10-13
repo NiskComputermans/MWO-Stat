@@ -10,6 +10,7 @@
 
 import requests
 from bs4 import BeautifulSoup
+import re
 
 class MWOStat:
   ## Class initialization
@@ -17,6 +18,7 @@ class MWOStat:
   def __init__(self):
     self.pilots = []
     self.mwo_url = 'https://mwomercs.com/do/login'
+    self.jarls_url = 'https://leaderboard.isengrim.org/search?u='
 
     self.sess = None
     self.cookie_jar = None
@@ -199,3 +201,30 @@ class MWOStat:
       return(ret.json())
     else:
       return("ERR: Request returned status code %s (%s)" % (ret.status_code, ret.reason))
+
+  def GetJarlsStats(self):
+    if len(self.pilots) == 0:
+      return("ERR: No pilots list loaded. Run ImportPilots before scraping stats!")
+
+    outputs = []
+
+    for mwo_pilot in self.pilots:
+      cooked_stats = {'Pilot': mwo_pilot, 'LastSeason': 0, 'AvgScore': 0, 'GamesPlayed': 0, 'WinRatio':0, 'KDRatio': 0, 'Rating': 0}
+      ret = requests.get(f'{self.jarls_url}{mwo_pilot}')
+      soup = BeautifulSoup(ret.text, 'html.parser')
+      err = soup.find('div', id='error')
+      if err:
+        if re.search(r'^No Results Found', soup.find('div', id='error').text):
+          return("ERR: Pilot {mwo_pilot} not found")
+
+      raw = soup.find('meta', property='og:description')['content']
+      raw = re.sub(r'[a-zA-Z;:%, ]+','',raw).split('|')
+      cooked_stats['LastSeason'] = raw[5]
+      cooked_stats['AvgScore'] = raw[1]
+      cooked_stats['GamesPlayed'] = raw[2]
+      cooked_stats['WinRatio'] = raw[3]
+      cooked_stats['KDRatio'] = raw[4]
+      cooked_stats['Rating'] = re.sub(r'^\[.*\]','',raw[0])
+
+      outputs.append(cooked_stats)
+    return(outputs)
